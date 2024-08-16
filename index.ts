@@ -17,8 +17,8 @@ const main = async () => {
       document.querySelectorAll("#new-arraival-area .product-item")
     );
 
-    // 各商品の情報を抽出 (上から3つだけ取得)
-    return items.slice(0, 3).map((item) => {
+    // 各商品の情報を抽出
+    return items.map((item) => {
       const name = item
         .querySelector(".product-item-name")
         ?.textContent?.trim();
