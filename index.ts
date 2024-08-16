@@ -66,13 +66,18 @@ const main = async () => {
       const shape = findValueByLabel('形状');
       const enhancement = findValueByLabel('エンハンスメント');
 
-      // 「コメント」ラベルを持つ要素を探し、その次のp要素内のspanテキストをすべて結合して取得
+      // 「コメント」ラベル以降の全テキストを取得
       const commentElement = Array.from(document.querySelectorAll("p")).find(p => p.textContent.trim().includes("コメント"));
       let comment = 'N/A';
-      if (commentElement && commentElement.nextElementSibling) {
-        comment = Array.from(commentElement.nextElementSibling.querySelectorAll("strong"))
-                      .map(span => span.textContent.trim())
-                      .join(" ");
+      if (commentElement) {
+        // 次の兄弟p要素を全て結合
+        const commentTexts = [];
+        let sibling = commentElement.nextElementSibling;
+        while (sibling && sibling.tagName === "P") {
+          commentTexts.push(sibling.textContent.trim());
+          sibling = sibling.nextElementSibling;
+        }
+        comment = commentTexts.join(" ");
       }
 
       return {
