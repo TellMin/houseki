@@ -1,4 +1,7 @@
 import puppeteer from "puppeteer";
+import fs from "fs";
+import path from "path";
+import { stringify } from "csv-stringify/sync";
 
 const HOUSEKI_URL = "https://houseki-t.jp/";
 
@@ -14,8 +17,8 @@ const main = async () => {
       document.querySelectorAll("#new-arraival-area .product-item")
     );
 
-    // 各商品の情報を抽出
-    return items.map((item) => {
+    // 各商品の情報を抽出 (上から3つだけ取得)
+    return items.slice(0, 1).map((item) => {
       const name = item
         .querySelector(".product-item-name")
         ?.textContent?.trim();
@@ -31,7 +34,81 @@ const main = async () => {
     });
   });
 
-  console.log(jewels);
+  // 各商品詳細ページにアクセスして追加情報を取得
+  for (let i = 0; i < jewels.length; i++) {
+    const detailPageUrl = new URL(jewels[i].link, HOUSEKI_URL).href;
+    await page.goto(detailPageUrl);
+
+    await page.waitForSelector("figure.table td");
+
+    const details = await page.evaluate(() => {
+
+      // すべてのtd要素を取得
+      const tdElements = document.querySelectorAll("figure.table td");
+
+      // 対象ラベルの値を取得する関数
+      const findValueByLabel = (label) => {
+        // labelと一致するtd要素を見つけ、その次のtd要素のテキストを取得
+        for (let i = 0; i < tdElements.length; i++) {
+          if (tdElements[i].textContent.trim() === label) {
+            // 次の兄弟要素が存在するか確認
+            const sibling = tdElements[i].nextElementSibling;
+            if (sibling && sibling.tagName === "TD") {
+              return sibling.textContent.trim();
+            }
+          }
+        }
+        return null;
+      };
+
+      const origin = findValueByLabel('産地');
+      const weight = findValueByLabel('重量');
+      const size = findValueByLabel('サイズ(縦)×(横)×(高)');
+      const clarity = findValueByLabel('クラリティー');
+      const color = findValueByLabel('カラー');
+      const shape = findValueByLabel('形状');
+      const enhancement = findValueByLabel('エンハンスメント');
+      const description = document.querySelector("div.item-description-body p")?.textContent?.trim();
+
+      return {
+        origin,
+        weight,
+        size,
+        clarity,
+        color,
+        shape,
+        enhancement,
+        description,
+      };
+    });
+
+    // 詳細データをマージ
+    jewels[i] = { ...jewels[i], ...details };
+  }
+
+  // CSVファイルとして保存
+  const csvData = stringify(jewels, {
+    header: true,
+    columns: [
+      "name",
+      "price",
+      "imageUrl",
+      "link",
+      "origin",
+      "weight",
+      "size",
+      "clarity",
+      "color",
+      "shape",
+      "enhancement",
+      "description",
+    ],
+  });
+
+  const filePath = path.join(process.cwd(), "jewels.csv");
+  fs.writeFileSync(filePath, csvData);
+
+  console.log(`Data saved to ${filePath}`);
 
   await browser.close();
 };
