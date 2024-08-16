@@ -18,7 +18,7 @@ const main = async () => {
     );
 
     // 各商品の情報を抽出 (上から3つだけ取得)
-    return items.slice(0, 1).map((item) => {
+    return items.slice(0, 3).map((item) => {
       const name = item
         .querySelector(".product-item-name")
         ?.textContent?.trim();
@@ -39,10 +39,7 @@ const main = async () => {
     const detailPageUrl = new URL(jewels[i].link, HOUSEKI_URL).href;
     await page.goto(detailPageUrl);
 
-    await page.waitForSelector("figure.table td");
-
     const details = await page.evaluate(() => {
-
       // すべてのtd要素を取得
       const tdElements = document.querySelectorAll("figure.table td");
 
@@ -68,7 +65,15 @@ const main = async () => {
       const color = findValueByLabel('カラー');
       const shape = findValueByLabel('形状');
       const enhancement = findValueByLabel('エンハンスメント');
-      const description = document.querySelector("div.item-description-body p")?.textContent?.trim();
+
+      // 「コメント」ラベルを持つ要素を探し、その次のp要素内のspanテキストをすべて結合して取得
+      const commentElement = Array.from(document.querySelectorAll("p")).find(p => p.textContent.trim().includes("コメント"));
+      let comment = 'N/A';
+      if (commentElement && commentElement.nextElementSibling) {
+        comment = Array.from(commentElement.nextElementSibling.querySelectorAll("strong"))
+                      .map(span => span.textContent.trim())
+                      .join(" ");
+      }
 
       return {
         origin,
@@ -78,7 +83,7 @@ const main = async () => {
         color,
         shape,
         enhancement,
-        description,
+        comment, // コメントとして取得
       };
     });
 
@@ -101,7 +106,7 @@ const main = async () => {
       "color",
       "shape",
       "enhancement",
-      "description",
+      "comment", // コメント列を追加
     ],
   });
 
